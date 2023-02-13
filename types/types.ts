@@ -104,7 +104,7 @@ export type RoomsWithId = [id: string, roomData: RoomData][]
 
 export type Turn = SidePick | null;
 export type Result = Winner | "draw";
-export type Winner = SidePick | null;
+export type Winner = [SidePick, string] | null;
 export type SidePick = "crossPlayer" | "circlePlayer";
 export type Pick = "X" | "O";
 export type BoardPick = Pick | null;

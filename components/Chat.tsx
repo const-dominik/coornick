@@ -70,7 +70,11 @@ const Chat = () => {
   }
 
   useEffect(() => {
-    messagesRef.current = messages;
+    msgCountRef.current = msgCount;
+  }, [msgCount]);
+
+  useEffect(() => {
+    messagesRef.current = messages
     scrollToBottom();
   }, [messages]);
 
@@ -114,7 +118,7 @@ const Chat = () => {
     <Container>
       <MessageContainer ref={divRef}>
         {messages.map(message => {
-          return <Message key={msgCount}>{message}</Message>;
+          return <Message key={Math.random()}>{message}</Message>;
         })}
       </MessageContainer>
       <StyledForm onSubmit={handleSubmit}>

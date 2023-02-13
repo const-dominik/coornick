@@ -54,11 +54,8 @@ const Room = () => {
     if (!jwt || (typeof roomId !== "string" && !window.location.pathname)) {
       return setTimeout(emitInitialGetRoom, 100);
     }
-    console.log(window.location.pathname);
     const id = window.location.pathname.slice(1);
-    console.log(id);
     setRoomId(id);
-    console.log("emitiing");
     socket.emit("getRoom", id, undefined, jwt);
   }
 
@@ -67,7 +64,6 @@ const Room = () => {
   }, [router.isReady]);
 
   useEffect(() => {
-    console.log(doesRouteActuallyExist);
     if (router.isReady && typeof roomId === "string") {
       socket.emit("doesRoomExist", roomId);
     }

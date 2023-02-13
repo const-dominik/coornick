@@ -39,7 +39,7 @@ const SocketHandler = (req: NextApiRequest, res: NextApiResponseWithSocket) => {
       }
     }
 
-    const handleDisconnection = (room: Room, nick: string) => {
+    const handleDisconnection = (room: Room, nick: string, scoreCounts: boolean) => {
       let playedAs: SidePick | "" = 
         (room.game.circlePlayer === nick ? "circlePlayer" :
         room.game.crossPlayer === nick ? "crossPlayer" :
@@ -49,21 +49,22 @@ const SocketHandler = (req: NextApiRequest, res: NextApiResponseWithSocket) => {
         if (room.game.turn) {
           room.game.turn = null;
           const oppositeSide = getOppositeSide(playedAs);
-          if (!room.game[oppositeSide]) return;
-          if (typeof room.game[oppositeSide] === "string" && typeof room.game[playedAs] === "string") {
+          if (room.game[oppositeSide] === null) return;
+          if (typeof room.game[oppositeSide] === "string" && typeof room.game[playedAs] === "string" && scoreCounts) {
             //@ts-ignore
             addScore(room.game[oppositeSide], "win");
             //@ts-ignore
             addScore(room.game[playedAs], "lose")
           }
-          io.in(room.id).emit("winner", oppositeSide, true);
+          //@ts-ignore
+          io.in(room.id).emit("winner", [oppositeSide, room.game[oppositeSide]], true);
         }
         room.game[playedAs] = null;
+        io.in(room.id).emit("sidePicked", playedAs, null);
       }
       if (!room.game.crossPlayer && !room.game.circlePlayer) {
         room.game.board = copyTuple(emptyBoard);
       }
-      
     }
 
     const addScore = async (nick: string, score: "win" | "lose" | "draw") => {
@@ -83,9 +84,7 @@ const SocketHandler = (req: NextApiRequest, res: NextApiResponseWithSocket) => {
         const added = await usersCollection.updateOne({ nick: nick }, { $set: { stats: user.stats } });
         if (added.acknowledged) {
           return true;
-        } else {
-          console.log("not acknowledged :(");
-        }
+        } 
       }
     }
 
@@ -155,7 +154,7 @@ const SocketHandler = (req: NextApiRequest, res: NextApiResponseWithSocket) => {
         const room = rooms.get(id);
         if (!room) return;
         if (!side) {
-          return handleDisconnection(room, data.nick);
+          return handleDisconnection(room, data.nick, true);
         }
         if (!room.game[side]) {
           const oppositeSide = getOppositeSide(side);
@@ -180,19 +179,25 @@ const SocketHandler = (req: NextApiRequest, res: NextApiResponseWithSocket) => {
       if (room) {
         const player = room.game[side];
         if (player) {
+          //jesli owner wysłał lub ktos samego siebie
           if (room.data.owner === data.nick || player === data.nick) {
-            io.in(id).emit("sidePicked", side, null);
+            //jesli w pokoju trwa gra
             if (room.game.turn) {
               let message: string;
               if (room.data.owner === data.nick && player !== data.nick) {
                 message = "The game has been stopped, because room owner kicked one of the players.";
+                handleDisconnection(room, data.nick, false);
                 io.in(id).emit("stopGame", "Owner kicked a guy.");
               } else {
                 message = `The game has been stopped, because ${data.nick} surrendered.`;
-                handleDisconnection(room, data.nick);
+                handleDisconnection(room, data.nick, true);
               }
               io.in(id).emit("message", "[SYSTEM]", message, id)
+              io.in(id).emit("sidePicked", side, null);
+            } else {
+              io.in(id).emit("sidePicked", side, null);
             }
+            room.game[side] = null;
           }
         }
       }
@@ -227,7 +232,7 @@ const SocketHandler = (req: NextApiRequest, res: NextApiResponseWithSocket) => {
             game.turn = null;
             addScore(winnerNick, "win");
             addScore(loserNick, "lose");
-            io.in(id).emit("winner", winner, false);
+            io.in(id).emit("winner", [winner, winnerNick], false);
           } else if (draw) {
             const circle = game.circlePlayer;
             const cross = game.crossPlayer;
@@ -271,8 +276,7 @@ const SocketHandler = (req: NextApiRequest, res: NextApiResponseWithSocket) => {
           rooms.delete(room);
           io.emit("removeRoom", room);
         }
-        //check if they're still here, only on other tab
-        handleDisconnection(gameRoom, data.nick);
+        handleDisconnection(gameRoom, data.nick, true);
         transferOwnership(socketRoom, gameRoom, data, room);
       })
     })
@@ -286,7 +290,7 @@ const SocketHandler = (req: NextApiRequest, res: NextApiResponseWithSocket) => {
         const gameRoom = rooms.get(room);
         if (!gameRoom || !socketRoom) return;
         if ([...socketRoom.keys()].filter(id => jwts.get(id) === jwt).length > 1) return;
-        handleDisconnection(gameRoom, data.nick);
+        handleDisconnection(gameRoom, data.nick, true);
         transferOwnership(socketRoom, gameRoom, data, room);
       })
       jwts.delete(socket.id);

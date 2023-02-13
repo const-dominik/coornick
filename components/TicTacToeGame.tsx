@@ -157,9 +157,7 @@ const TicTacToeGame = ({ room, password }: { room: Room, password: string }) => 
 
   useEffect(() => {
     fetch("/api/socket").finally(() => {
-      console.log("events handlers");
       socket.on("roomData", (room) => {
-        console.log("Got roomData");
         setGame(room.game.board);
         setTurn(room.game.turn);
         setPlayers({
@@ -167,14 +165,15 @@ const TicTacToeGame = ({ room, password }: { room: Room, password: string }) => 
           crossPlayer: room.game.crossPlayer
         });
         const winner = checkTTTWinner(room.game.board);
-        if (winner) {
-          setWinner({ winner: winner, surrender: false});
+        if (winner && typeof players[winner] === "string") {
+          setWinner({ winner: [winner, players[winner] || ""], surrender: false});
         }
       })
   
       socket.on("sidePicked", (side, player) => {
         const oppositeSide = getOppositeSide(side);
-        if (playersRef.current[oppositeSide] === player) {
+        if (winner.winner) setWinner(initWinner);
+        if (player !== null && playersRef.current[oppositeSide] === player) {
           setPlayers({ ...playersRef.current, [side]: player, [oppositeSide]: null });
         } else {
           setPlayers({ ...playersRef.current, [side]: player });
@@ -204,18 +203,13 @@ const TicTacToeGame = ({ room, password }: { room: Room, password: string }) => 
   
       socket.on("stopGame", () => {
         setGame(initBoard);
-        setWinner({
-          winner: null,
-          surrender: false
-        });
+        setWinner(initWinner);
         setTurn(null);
       });
 
       if (typeof roomId === "string" && !room.data.requiresPassword) {
         if (!room.data.requiresPassword) {
           socket.emit("getRoom", roomId, undefined, jwt);
-        } else {
-          console.log(passwordRef.current);
         }
       }
     })
@@ -268,7 +262,7 @@ const TicTacToeGame = ({ room, password }: { room: Room, password: string }) => 
     if (winner === "draw") {
       return `It's a draw!`
     } else if (winner) {
-      return `${players[winner]} is the winner!${ surr ? ` Their oponent surrendered!` : ""}`;
+      return `${winner[1]} is the winner!${ surr ? ` Their oponent surrendered!` : ""}`;
     }
   }
 
@@ -278,9 +272,7 @@ const TicTacToeGame = ({ room, password }: { room: Room, password: string }) => 
   }
 
   const canLeave = (side: SidePick) => {
-    console.log(room);
     if (!room?.data.owner) return false;
-    console.log(room.data.owner);
     return data.nick === room.data.owner || data.nick === players[side];
   }
   
@@ -314,7 +306,8 @@ const TicTacToeGame = ({ room, password }: { room: Room, password: string }) => 
       <GameContainer>
         <CommunicateBox>
           { turn && arePlayersReady() && (<h3>It&apos;s {players[turn]} turn!</h3>)}
-          { !!winner.winner && <h3>{generateMessage(winner.winner, winner.surrender)}</h3>}
+          { winner.winner && 
+              <h3>{generateMessage(winner.winner, winner.surrender)}</h3>}
           { !turn && !arePlayersReady() && (<h3>Waiting for players...</h3>)}
           { !turn && arePlayersReady() && <Cloud onClick={restart}>Play again</Cloud> }
         </CommunicateBox>

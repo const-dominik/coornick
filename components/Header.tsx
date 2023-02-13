@@ -80,7 +80,6 @@ const Header = () => {
 
   const setGuestInterval = (): void | ReturnType<typeof setTimeout> => {
     const guest = getGuest();
-    console.log(guest);
     if (guest === undefined) {
       return setTimeout(setGuestInterval, 100);
     }
