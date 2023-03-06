@@ -1,4 +1,4 @@
-import { Room, TicTacToe, SidePick, Board, Pick, Turn, DecodedJWT, Result } from "../types/types"; 
+import { Room, TicTacToe, SidePick, Board, Pick, Turn, DecodedJWT, Result, Winner } from "../types/types"; 
 import { useSocket } from "../hooks/useSocket";
 import { useEffect, useRef, useState, MouseEvent } from "react";
 import styled from 'styled-components';
@@ -86,7 +86,7 @@ const GameContainer = styled.div`
 const MiddleNick = styled.div`
   position: absolute;
   bottom: 50%;
-  background: rgba(230, 190, 148, 0.3);
+  background: rgba(230, 190, 148, 0.5);
   width: 100%;
   font-size: 2rem;
   text-align: center;
@@ -133,7 +133,7 @@ const TicTacToeGame = ({ room, password }: { room: Room, password: string }) => 
   const [players, setPlayers] = useState(initPlayers);
   const [game, setGame] = useState<Board>(initBoard);
   const [turn, setTurn] = useState<Turn>(null);
-  const [winner, setWinner] = useState<{winner: Result, surrender: boolean}>(initWinner);
+  const [winner, setWinner] = useState<{winner: Winner, surrender: boolean}>(initWinner);
   const { setIsAuthorized } = useAuthContext();
   const turnRef = useRef<Turn>(turn);
   const playersRef = useRef<Players>(players);
@@ -258,11 +258,11 @@ const TicTacToeGame = ({ room, password }: { room: Room, password: string }) => 
     }
   }
 
-  const generateMessage = (winner: Result, surr: boolean) => {
+  const generateMessage = (winner: Result, winnerNick: string, surr: boolean) => {
     if (winner === "draw") {
       return `It's a draw!`
     } else if (winner) {
-      return `${winner[1]} is the winner!${ surr ? ` Their oponent surrendered!` : ""}`;
+      return `${winnerNick} is the winner!${ surr ? ` Their oponent surrendered!` : ""}`;
     }
   }
 
@@ -307,7 +307,7 @@ const TicTacToeGame = ({ room, password }: { room: Room, password: string }) => 
         <CommunicateBox>
           { turn && arePlayersReady() && (<h3>It&apos;s {players[turn]} turn!</h3>)}
           { winner.winner && 
-              <h3>{generateMessage(winner.winner, winner.surrender)}</h3>}
+              <h3>{generateMessage(winner.winner[0], winner.winner[1], winner.surrender)}</h3>}
           { !turn && !arePlayersReady() && (<h3>Waiting for players...</h3>)}
           { !turn && arePlayersReady() && <Cloud onClick={restart}>Play again</Cloud> }
         </CommunicateBox>

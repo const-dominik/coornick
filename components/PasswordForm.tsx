@@ -85,7 +85,7 @@ const PasswordForm = ({ id, setPassword }: { id: string, setPassword: Dispatch<S
       <FormContainer>
         <StyledForm onSubmit={handleSubmit}>
           <StyledH2>{isWrongPassword ? "Wrong password!" : "Enter room password."}</StyledH2>
-          <StyledInput type="text" name="password" value={passwordInput} onChange={handleChange} />
+          <StyledInput type="password" name="password" value={passwordInput} onChange={handleChange} />
           <StyledInput type="submit" value="Enter!" style={{borderRadius: "3px", cursor: "pointer", width: "40%"}} />
         </StyledForm>
       </FormContainer>

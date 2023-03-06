@@ -79,7 +79,6 @@ const ProfilePage = () => {
     const data = jwtDecode<DecodedJWT>(jwt);
     fetch('/api/socket/').finally(() => {
       socket.on("profile", (userData) => {
-        console.log(userData);
         setUserData(userData);
       });
       if (data.email) {
